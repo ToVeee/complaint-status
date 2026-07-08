@@ -214,24 +214,24 @@
             // Give the ENTIRE CARD its own ID
             card.id = complaintId;
 
-    //         card.innerHTML = `
-    //     <div class="card-header">
-    //         <span class="card-name">
-    //             ${data.isAnonymous ? '🕵️ Anonymous Student' : '👤 ' + data.name}
-    //         </span>
-    //         <span>📅 ${data.date}</span>
-    //     </div>
+            card.innerHTML = `
+        <div class="card-header">
+            <span class="card-name">
+                ${data.isAnonymous ? '🕵️ Anonymous Student' : '👤 ' + data.name}
+            </span>
+            <span>📅 ${data.date}</span>
+        </div>
 
-    //     <div class="card-body">
-    //         <p><strong>Tracking ID:</strong> ${complaintId}</p>
-    //         <p>${data.text || "<em>No written details provided.</em>"}</p>
-    //     </div>
+        <div class="card-body">
+            <p><strong>Tracking ID:</strong> ${complaintId}</p>
+            <p>${data.text || "<em>No written details provided.</em>"}</p>
+        </div>
 
-    //     <div class="card-footer">
-    //         <span><strong>Section:</strong> ${data.section || 'N/A'}</span>
-    //         <span class="score-tag">Severity Score: ${data.score}</span>
-    //     </div>
-    // `;
+        <div class="card-footer">
+            <span><strong>Section:</strong> ${data.section || 'N/A'}</span>
+            <span class="score-tag">Severity Score: ${data.score}</span>
+        </div>
+    `;
 
             // Add the card to the top of the list
             complaintList.insertBefore(card, complaintList.firstChild);

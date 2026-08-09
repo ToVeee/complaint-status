@@ -274,6 +274,42 @@
             historyArray.reverse().forEach(complaint => {
                 renderComplaintCard(complaint);
             });
+            // Step A: Grab the ID from the URL right when the page opens
+const targetId = window.location.hash; 
+
+// Step B: Locate your existing socket code
+socket.onmessage = (event) => {
+    
+    // --- YOUR EXISTING CODE IS ALREADY HERE ---
+    // It looks like: const data = JSON.parse(event.data);
+    // It takes the database data and inserts it into the page.
+    // ------------------------------------------
+
+    // Step C: Add this logic at the very end of your existing socket function
+    if (targetId) {
+        // Find the element that was just created by the socket data
+        const target = document.querySelector(targetId);
+
+        if (target) {
+            // Scroll to it
+            target.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+
+            // Highlight it
+            target.style.outline = "4px solid gold";
+
+            setTimeout(() => {
+                target.style.outline = "";
+            }, 4000);
+            
+            // Clear the hash from the browser address bar so it doesn't scroll again
+            history.replaceState(null, null, ' '); 
+        }
+    }
+};
+
         });
 
    window.addEventListener("load", () => {

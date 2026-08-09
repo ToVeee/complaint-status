@@ -156,17 +156,24 @@
     </div>
 
     <script>
-        // Connect Render server
-        const socket = io('rekserver-production.up.railway.app');
+        function esc(str) {
+            return String(str ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        // The tracking ID comes from the URL hash, e.g. #ER-AB12CD34
+        const targetHash = window.location.hash; // includes the '#'
+        const targetId = targetHash ? targetHash.slice(1) : null;
+
+        const socket = io('https://rekserver-production.up.railway.app');
 
         const statusBadge = document.getElementById('status');
         const complaintList = document.getElementById('complaintList');
 
-        // Monitor connection status
         socket.on('connect', () => {
             statusBadge.innerText = "🟢 Connected (Live)";
             statusBadge.className = "status-badge";
-            console.log("Connected to WebSocket tunnel successfully.");
         });
 
         socket.on('disconnect', () => {
@@ -174,13 +181,12 @@
             statusBadge.className = "status-badge disconnected";
         });
 
+        function showMessage(text) {
+            complaintList.innerHTML = `<div class="no-data">${esc(text)}</div>`;
+        }
+
         // --- CARD ---
         function renderComplaintCard(data) {
-            const noDataMessage = document.querySelector('.no-data');
-            if (noDataMessage) {
-                noDataMessage.remove();
-            }
-
             let severityClass = 'severity-low';
             if (data.score >= 25 && data.score < 40) {
                 severityClass = 'severity-medium';
@@ -188,151 +194,79 @@
                 severityClass = 'severity-high';
             }
 
-           
-            function generateComplaintCode() {
-                const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-                const bytes = new Uint8Array(8);
-
-                crypto.getRandomValues(bytes);
-
-                let id = "";
-
-                for (const b of bytes) {
-                    id += chars[b % chars.length];
-                }
-
-                return `ER-${id}`;
-            }
-
-            
             const complaintId = data.trackingid || data.trackingId;
 
-            // create card
             const card = document.createElement('div');
             card.className = `complaint-card ${severityClass}`;
-
             card.id = complaintId;
+
+            const statusIcon = data.status === 'Resolved' ? '🟢'
+                : data.status === 'Rejected' ? '🔴'
+                : '🟡';
 
             card.innerHTML = `
         <div class="card-header">
             <span class="card-name">
-                ${data.isAnonymous ? '🕵️ Anonymous Student' : '👤 ' + data.name}  <span class="status"></span> 
+                ${data.isAnonymous ? '🕵️ Anonymous Student' : '👤 ' + esc(data.name)} <span>${statusIcon}</span>
             </span>
-            <span>📅 ${data.date}</span>
+            <span>📅 ${esc(data.date)}</span>
         </div>
 
         <div class="card-body">
-            <p><strong>Tracking ID:</strong> ${complaintId}</p>
-<p><strong>Category:</strong> ${data.category}</p>
-          <p class="details">${data.text || "<em>No written details provided.</em>"}</p>
+            <p><strong>Tracking ID:</strong> ${esc(complaintId)}</p>
+            <p><strong>Category:</strong> ${esc(data.category)}</p>
+            <p><strong>Status:</strong> ${esc(data.status || 'Pending')}</p>
+            <p class="details">${data.text ? esc(data.text) : '<em>No written details provided.</em>'}</p>
         </div>
 
         <div class="card-footer">
-            <span><strong>Section:</strong> ${data.section || 'N/A'}</span>
+            <span><strong>Section:</strong> ${esc(data.section || 'N/A')}</span>
             <span class="score-tag">Severity Score: ${data.score}</span>
         </div>
     `;
 
-            const statusRadios = card.querySelectorAll(`input[name="status-${complaintId}"]`);
-
-            statusRadios.forEach(radio => {
-                radio.addEventListener('change', () => {
-                    console.log("Sending:", complaintId, radio.value);
-
-                    socket.emit('updateStatus', {
-                        trackingId: complaintId,
-                        status: radio.value
-                    });
-                });
-            });
-
-            const statusElement = card.querySelector('.status');
-            if (data.status === 'Resolved') {
-                statusElement.innerHTML = '<span>🟢</span>';
-            } else if (data.status === 'Pending') {
-                statusElement.innerHTML = '<span>🟡</span>';
-            } else if (data.status === 'Rejected') {
-                statusElement.innerHTML = '<span>🔴</span>';
-            }
-           
-            complaintList.insertBefore(card, complaintList.firstChild);
-        }
-       
-        socket.on('newComplaint', (data) => {
-            console.log("Received live broadcast data:", data);
-            renderComplaintCard(data);
-        });
-
-        
-        socket.on('complaintHistory', (historyArray) => {
-            console.log("Received database history:", historyArray);
-
-            
             complaintList.innerHTML = '';
-
-            
-            historyArray.reverse().forEach(complaint => {
-                renderComplaintCard(complaint);
-            });
-            // Step A: Grab the ID from the URL right when the page opens
-const targetId = window.location.hash; 
-
-// Step B: Locate your existing socket code
-socket.onmessage = (event) => {
-    
-    // --- YOUR EXISTING CODE IS ALREADY HERE ---
-    // It looks like: const data = JSON.parse(event.data);
-    // It takes the database data and inserts it into the page.
-    // ------------------------------------------
-
-    // Step C: Add this logic at the very end of your existing socket function
-    if (targetId) {
-        // Find the element that was just created by the socket data
-        const target = document.querySelector(targetId);
-
-        if (target) {
-            // Scroll to it
-            target.scrollIntoView({
-                behavior: "smooth",
-                block: "center"
-            });
-
-            // Highlight it
-            target.style.outline = "4px solid gold";
-
-            setTimeout(() => {
-                target.style.outline = "";
-            }, 4000);
-            
-            // Clear the hash from the browser address bar so it doesn't scroll again
-            history.replaceState(null, null, ' '); 
+            complaintList.appendChild(card);
         }
-    }
-};
 
+        if (!targetId) {
+            showMessage('No tracking ID provided. Use the link or QR code you received after submitting a complaint.');
+        }
+
+        // Only ever render the ONE complaint matching this page's tracking ID —
+        // this page is a personal status check, not a live feed of everyone's complaints.
+        socket.on('complaintHistory', (historyArray) => {
+            if (!targetId) return;
+            const match = (historyArray || []).find(c => (c.trackingid || c.trackingId) === targetId);
+            if (match) {
+                renderComplaintCard(match);
+            } else {
+                showMessage('No complaint found with this tracking ID.');
+            }
         });
 
-   window.addEventListener("load", () => {
-    // Look for the hash instead of the search/query parameter
-    if (window.location.hash) {
-        // window.location.hash is already '#product-specifications'
-        const target = document.querySelector(window.location.hash);
+        // In case the complaint was just submitted and arrives as a live event
+        // before complaintHistory even loads.
+        socket.on('newComplaint', (data) => {
+            if (!targetId) return;
+            const id = data.trackingid || data.trackingId;
+            if (id === targetId) {
+                renderComplaintCard(data);
+            }
+        });
 
-        if (target) {
-            target.scrollIntoView({
-                behavior: "smooth",
-                block: "center"
-            });
+        socket.on('statusUpdated', ({ trackingId, status }) => {
+            if (trackingId !== targetId) return;
+            const card = document.getElementById(trackingId);
+            if (!card) return;
+            const statusText = card.querySelector('.card-body p:nth-of-type(3)');
+            if (statusText) statusText.innerHTML = `<strong>Status:</strong> ${esc(status)}`;
+        });
 
-            target.style.outline = "4px solid gold";
-
-            setTimeout(() => {
-                target.style.outline = "";
-            }, 4000);
-        }
-    }
-});
-
+        socket.on('cardDeleted', ({ trackingId }) => {
+            if (trackingId !== targetId) return;
+            showMessage('This complaint record has been removed.');
+        });
     </script>
 </body>
 

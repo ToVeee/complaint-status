@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>complaint status</title>
+    <title>Complaint Status</title>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * {
             margin: 0;
@@ -29,6 +30,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .status-badge {
@@ -37,6 +40,7 @@
             border-radius: 20px;
             font-size: 14px;
             font-weight: bold;
+            white-space: nowrap;
         }
 
         .status-badge.disconnected {
@@ -44,13 +48,127 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 600px;
             margin: 0 auto;
         }
 
-        h2 {
-            margin-bottom: 15px;
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 30px 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .panel h2 {
             color: #800000;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .panel .hint {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 22px;
+        }
+
+        #codeForm {
+            display: flex;
+            gap: 8px;
+        }
+
+        #codeInput {
+            flex: 1;
+            padding: 12px 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 15px;
+            text-transform: uppercase;
+        }
+
+        #codeInput:focus {
+            outline: 2px solid #800000;
+            outline-offset: -1px;
+        }
+
+        #codeForm button {
+            background: #800000;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0 20px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        #codeForm button:hover {
+            background: #660000;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+            margin: 20px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .divider span {
+            padding: 0 12px;
+        }
+
+        .upload-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 12px;
+            border: 2px dashed #800000;
+            border-radius: 6px;
+            color: #800000;
+            font-weight: bold;
+            cursor: pointer;
+            background: #fdf5f5;
+        }
+
+        .upload-btn:hover {
+            background: #f6e9e9;
+        }
+
+        .lookup-message {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 13.5px;
+            color: #555;
+            min-height: 18px;
+        }
+
+        .lookup-message.error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: #800000;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 18px;
+            padding: 0;
+        }
+
+        .back-btn:hover {
+            text-decoration: underline;
         }
 
         #complaintList {
@@ -63,12 +181,11 @@
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
             border-left: 5px solid #ccc;
             animation: slideIn 0.3s ease-out;
         }
 
-        /* Color coding by severity score */
         .severity-low {
             border-left-color: #28a745;
         }
@@ -95,9 +212,13 @@
         }
 
         .card-body {
-            font-size: 16px;
+            font-size: 15px;
             line-height: 1.5;
             margin-bottom: 10px;
+        }
+
+        .card-body p {
+            margin-bottom: 4px;
         }
 
         .card-footer {
@@ -105,6 +226,7 @@
             justify-content: space-between;
             align-items: center;
             font-size: 13px;
+            margin-top: 10px;
         }
 
         .score-tag {
@@ -112,6 +234,12 @@
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: bold;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            color: #999;
         }
 
         @keyframes slideIn {
@@ -125,16 +253,6 @@
                 transform: translateY(0);
             }
         }
-
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-            background: white;
-            border-radius: 8px;
-        }
-
-     
     </style>
 </head>
 
@@ -143,15 +261,33 @@
     <div class="container">
         <header>
             <div>
-                <h1>Complaint status</h1>
-                <p>Real-time School Complaint Monitoring Feed</p>
+                <h1>Complaint Status</h1>
             </div>
             <div id="status" class="status-badge disconnected">Connecting...</div>
         </header>
 
-        <h2>Live Feed</h2>
-        <div id="complaintList">
-            <div class="no-data">No complaints received yet. Waiting for live activity...</div>
+        <!-- Entry / lookup view -->
+        <div id="lookupView" class="panel">
+            <h2>Check Your Complaint Status</h2>
+            <p class="hint">Enter the tracking code you received, or upload a photo of your QR code.</p>
+
+            <form id="codeForm">
+                <input type="text" id="codeInput" placeholder="e.g. ER-AB12CD34" autocomplete="off">
+                <button type="submit">Check</button>
+            </form>
+
+            <div class="divider"><span>or</span></div>
+
+            <label class="upload-btn" for="qrFileInput">📷 Upload a Photo of Your QR Code</label>
+            <input type="file" id="qrFileInput" accept="image/*" hidden>
+
+            <p id="lookupMessage" class="lookup-message"></p>
+        </div>
+
+        <!-- Result view -->
+        <div id="resultView" class="panel" style="display:none;">
+            <button id="backBtn" class="back-btn">‹ Check another complaint</button>
+            <div id="complaintList"></div>
         </div>
     </div>
 
@@ -162,15 +298,24 @@
             }[ch]));
         }
 
-        // The tracking ID comes from the URL hash, e.g. #ER-AB12CD34
-        const targetHash = window.location.hash; // includes the '#'
-        const targetId = targetHash ? targetHash.slice(1) : null;
-
         const socket = io('https://rekserver-production.up.railway.app');
 
         const statusBadge = document.getElementById('status');
         const complaintList = document.getElementById('complaintList');
+        const lookupView = document.getElementById('lookupView');
+        const resultView = document.getElementById('resultView');
+        const codeForm = document.getElementById('codeForm');
+        const codeInput = document.getElementById('codeInput');
+        const qrFileInput = document.getElementById('qrFileInput');
+        const lookupMessage = document.getElementById('lookupMessage');
+        const backBtn = document.getElementById('backBtn');
 
+        // ---------- state ----------
+        let latestHistory = [];   // cached copy of every complaint, refreshed whenever the server sends it
+        let historyLoaded = false;
+        let targetId = null;      // the tracking ID we're currently trying to show
+
+        // ---------- connection ----------
         socket.on('connect', () => {
             statusBadge.innerText = "🟢 Connected (Live)";
             statusBadge.className = "status-badge";
@@ -181,11 +326,27 @@
             statusBadge.className = "status-badge disconnected";
         });
 
-        function showMessage(text) {
+        // ---------- view switching ----------
+        function showResultView() {
+            lookupView.style.display = 'none';
+            resultView.style.display = 'block';
+        }
+
+        function showLookupView() {
+            resultView.style.display = 'none';
+            lookupView.style.display = 'block';
+        }
+
+        function setLookupMessage(text, isError) {
+            lookupMessage.textContent = text;
+            lookupMessage.className = 'lookup-message' + (isError ? ' error' : '');
+        }
+
+        function showRemovedMessage(text) {
             complaintList.innerHTML = `<div class="no-data">${esc(text)}</div>`;
         }
 
-        // --- CARD ---
+        // ---------- card rendering ----------
         function renderComplaintCard(data) {
             let severityClass = 'severity-low';
             if (data.score >= 25 && data.score < 40) {
@@ -202,7 +363,7 @@
 
             const statusIcon = data.status === 'Resolved' ? '🟢'
                 : data.status === 'Rejected' ? '🔴'
-                : '🟡';
+                    : '🟡';
 
             card.innerHTML = `
         <div class="card-header">
@@ -215,8 +376,8 @@
         <div class="card-body">
             <p><strong>Tracking ID:</strong> ${esc(complaintId)}</p>
             <p><strong>Category:</strong> ${esc(data.category)}</p>
-            <p><strong>Status:</strong> ${esc(data.status || 'Pending')}</p>
-            <p class="details">${data.text ? esc(data.text) : '<em>No written details provided.</em>'}</p>
+            <p class="status-line"><strong>Status:</strong> ${esc(data.status || 'Pending')}</p>
+            <p>${data.text ? esc(data.text) : '<em>No written details provided.</em>'}</p>
         </div>
 
         <div class="card-footer">
@@ -229,29 +390,112 @@
             complaintList.appendChild(card);
         }
 
-        if (!targetId) {
-            showMessage('No tracking ID provided. Use the link or QR code you received after submitting a complaint.');
+        // ---------- lookup flow ----------
+        function normalizeCode(raw) {
+            return raw.trim().toUpperCase();
         }
 
-        // Only ever render the ONE complaint matching this page's tracking ID —
-        // this page is a personal status check, not a live feed of everyone's complaints.
-        socket.on('complaintHistory', (historyArray) => {
-            if (!targetId) return;
-            const match = (historyArray || []).find(c => (c.trackingid || c.trackingId) === targetId);
-            if (match) {
-                renderComplaintCard(match);
+        function requestLookup(rawId) {
+            const id = normalizeCode(rawId);
+            if (!id) {
+                setLookupMessage('Please enter a tracking code.', true);
+                return;
+            }
+            targetId = id;
+            codeInput.value = id;
+            history.replaceState(null, '', '#' + id);
+
+            if (historyLoaded) {
+                resolveLookup();
             } else {
-                showMessage('No complaint found with this tracking ID.');
+                setLookupMessage('Looking up your complaint…', false);
+            }
+        }
+
+        function resolveLookup() {
+            const match = latestHistory.find(c => (c.trackingid || c.trackingId) === targetId);
+            if (match) {
+                setLookupMessage('', false);
+                renderComplaintCard(match);
+                showResultView();
+            } else {
+                setLookupMessage('No complaint found with that tracking code. Double-check it and try again.', true);
+            }
+        }
+
+        codeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            requestLookup(codeInput.value);
+        });
+
+        backBtn.addEventListener('click', () => {
+            targetId = null;
+            history.replaceState(null, '', window.location.pathname);
+            setLookupMessage('', false);
+            showLookupView();
+        });
+
+        // ---------- QR photo upload ----------
+        function decodeQRFromFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        if (code) {
+                            resolve(code.data);
+                        } else {
+                            reject(new Error("Couldn't find a QR code in that photo. Try a clearer image."));
+                        }
+                    };
+                    img.onerror = () => reject(new Error('That file could not be read as an image.'));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error('That file could not be read.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function extractTrackingId(decodedText) {
+            const hashIndex = decodedText.indexOf('#');
+            return hashIndex !== -1 ? decodedText.slice(hashIndex + 1).trim() : decodedText.trim();
+        }
+
+        qrFileInput.addEventListener('change', async () => {
+            const file = qrFileInput.files[0];
+            if (!file) return;
+            setLookupMessage('Reading QR code…', false);
+            try {
+                const decoded = await decodeQRFromFile(file);
+                const id = extractTrackingId(decoded);
+                requestLookup(id);
+            } catch (err) {
+                setLookupMessage(err.message, true);
+            } finally {
+                qrFileInput.value = '';
             }
         });
 
-        // In case the complaint was just submitted and arrives as a live event
-        // before complaintHistory even loads.
+        // ---------- socket events ----------
+        socket.on('complaintHistory', (historyArray) => {
+            latestHistory = historyArray || [];
+            historyLoaded = true;
+            if (targetId) resolveLookup();
+        });
+
         socket.on('newComplaint', (data) => {
-            if (!targetId) return;
             const id = data.trackingid || data.trackingId;
-            if (id === targetId) {
+            latestHistory.push(data);
+            if (targetId && id === targetId) {
                 renderComplaintCard(data);
+                showResultView();
             }
         });
 
@@ -259,14 +503,19 @@
             if (trackingId !== targetId) return;
             const card = document.getElementById(trackingId);
             if (!card) return;
-            const statusText = card.querySelector('.card-body p:nth-of-type(3)');
-            if (statusText) statusText.innerHTML = `<strong>Status:</strong> ${esc(status)}`;
+            const statusLine = card.querySelector('.status-line');
+            if (statusLine) statusLine.innerHTML = `<strong>Status:</strong> ${esc(status)}`;
         });
 
         socket.on('cardDeleted', ({ trackingId }) => {
             if (trackingId !== targetId) return;
-            showMessage('This complaint record has been removed.');
+            showRemovedMessage('This complaint record has been removed.');
         });
+
+        // ---------- entry point ----------
+        if (window.location.hash) {
+            requestLookup(window.location.hash.slice(1));
+        }
     </script>
 </body>
 

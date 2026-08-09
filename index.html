@@ -276,30 +276,27 @@
             });
         });
 
-        window.addEventListener("load", () => {
-            if (window.location.hash) {
-                const target = document.querySelector(window.location.hash);
+   window.addEventListener("load", () => {
+    // Look for the hash instead of the search/query parameter
+    if (window.location.hash) {
+        // window.location.hash is already '#product-specifications'
+        const target = document.querySelector(window.location.hash);
 
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center"
-                    });
+        if (target) {
+            target.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
 
-                    target.style.outline = "4px solid gold";
+            target.style.outline = "4px solid gold";
 
-                    setTimeout(() => {
-                        target.style.outline = "";
-                    }, 4000);
-                }
-            }
-        });
+            setTimeout(() => {
+                target.style.outline = "";
+            }, 4000);
+        }
+    }
+});
 
-     function showDetails(){
-        
-
-
-}
     </script>
 </body>
 

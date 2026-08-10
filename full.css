@@ -1,0 +1,405 @@
+:root {
+    --ink: #6B1420;
+    --ink-dark: #4A0F17;
+    --gold: #B8863B;
+    --paper: #E9ECF1;
+    --card: #FFFFFF;
+    --text: #23262B;
+    --text-mute: #6B7280;
+    --border: #DBDFE6;
+    --ok: #2F7D5B;
+    --ok-bg: #E4F2EC;
+    --ok-text: #1F5C40;
+    --warn: #B9852A;
+    --warn-bg: #FBF1DF;
+    --warn-text: #7A5A12;
+    --danger: #9C3B3B;
+    --danger-bg: #F6E6E6;
+    --danger-text: #7A2828;
+    --radius: 12px;
+    --shadow: 0 1px 2px rgba(20, 20, 30, .06), 0 10px 24px -14px rgba(20, 20, 30, .22);
+    --font-display: 'Source Serif 4', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--paper);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 20px;
+}
+
+button,
+input {
+    font-family: inherit;
+    color: inherit;
+}
+
+:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+header {
+    background: linear-gradient(180deg, var(--ink) 0%, var(--ink-dark) 100%);
+    color: white;
+    padding: 18px 22px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    box-shadow: var(--shadow);
+}
+
+header h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 21px;
+}
+
+.status-badge {
+    background: var(--danger);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-badge:not(.disconnected) {
+    background: var(--ok);
+}
+
+.container {
+    max-width: 460px;
+    margin: 0 auto;
+}
+
+/* ---------- Lookup panel ---------- */
+.panel {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 30px 26px;
+    box-shadow: var(--shadow);
+}
+
+.panel h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--ink-dark);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.panel .hint {
+    text-align: center;
+    color: var(--text-mute);
+    font-size: 14px;
+    margin-bottom: 24px;
+}
+
+#codeForm {
+    display: flex;
+    gap: 8px;
+}
+
+#codeInput {
+    flex: 1;
+    padding: 13px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    background: var(--paper);
+}
+
+#codeInput:focus {
+    background: #fff;
+}
+
+#codeInput::placeholder {
+    color: #A6ABB5;
+}
+
+#codeForm button {
+    background: var(--ink);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 22px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#codeForm button:hover {
+    background: var(--ink-dark);
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    color: var(--text-mute);
+    font-size: 12.5px;
+    margin: 22px 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+
+.divider span {
+    padding: 0 12px;
+}
+
+.upload-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px;
+    border: 1.5px dashed var(--ink);
+    border-radius: 8px;
+    color: var(--ink-dark);
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    background: rgba(107, 20, 32, .04);
+}
+
+.upload-btn:hover {
+    background: rgba(107, 20, 32, .08);
+}
+
+.upload-btn svg {
+    flex-shrink: 0;
+}
+
+.lookup-message {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-mute);
+    min-height: 18px;
+}
+
+.lookup-message.error {
+    color: var(--danger-text);
+    font-weight: 600;
+}
+
+/* ---------- Result view ---------- */
+.back-btn {
+    background: none;
+    border: none;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    margin-bottom: 16px;
+    padding: 4px 0;
+}
+
+.back-btn:hover {
+    text-decoration: underline;
+}
+
+#complaintList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.no-data {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-mute);
+    font-size: 14px;
+}
+
+/* ---------- Signature: the ticket stub ---------- */
+.ticket {
+    position: relative;
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    animation: ticketIn .3s ease-out;
+}
+
+@keyframes ticketIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ticket {
+        animation: none;
+    }
+}
+
+.ticket-head {
+    padding: 24px 24px 20px;
+    text-align: center;
+}
+
+.ticket-label {
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-mute);
+    margin-bottom: 6px;
+}
+
+.ticket-code {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--ink-dark);
+}
+
+.ticket-tear {
+    position: relative;
+    border-top: 2px dashed var(--border);
+}
+
+.ticket-tear::before,
+.ticket-tear::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--paper);
+}
+
+.ticket-tear::before {
+    left: -10px;
+}
+
+.ticket-tear::after {
+    right: -10px;
+}
+
+.ticket-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin: 20px 24px 6px;
+    padding: 13px;
+    border-radius: 9px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16.5px;
+}
+
+.ticket-status .icon {
+    font-size: 17px;
+}
+
+.ticket-status.status-pending {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+}
+
+.ticket-status.status-resolved {
+    background: var(--ok-bg);
+    color: var(--ok-text);
+}
+
+.ticket-status.status-rejected {
+    background: var(--danger-bg);
+    color: var(--danger-text);
+}
+
+.ticket-details {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 14px;
+    margin: 18px 24px;
+    font-size: 13.5px;
+}
+
+.ticket-details dt {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--text-mute);
+    white-space: nowrap;
+}
+
+.ticket-details dd {
+    color: var(--text);
+}
+
+.ticket-narrative {
+    margin: 0 24px 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.ticket-narrative p {
+    font-size: 13.5px;
+    background: var(--paper);
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.ticket-narrative p em {
+    color: var(--text-mute);
+}
+
+@media (max-width: 400px) {
+    .ticket-code {
+        font-size: 18px;
+        letter-spacing: 1px;
+    }
+
+    .panel {
+        padding: 24px 18px;
+    }
+}
+
+.ticket-feedback {
+    margin: 0 24px 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}

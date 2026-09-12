@@ -4,7 +4,7 @@ function esc(str) {
     }[ch]));
 }
 
-const socket = io('https://rekserver-production.up.railway.app');
+const socket = io('https://rekserver.onrender.com');
 
 const statusBadge = document.getElementById('status');
 const complaintList = document.getElementById('complaintList');

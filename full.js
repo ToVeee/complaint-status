@@ -4,7 +4,7 @@ function esc(str) {
     }[ch]));
 }
 
-const socket = io(' https://api.rekserver.dpdns.org');
+const socket = io('https://api.rekserver.dpdns.org');
 
 const statusBadge = document.getElementById('status');
 const complaintList = document.getElementById('complaintList');

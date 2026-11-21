@@ -4,8 +4,26 @@ function esc(str) {
     }[ch]));
 }
 
-const socket = io('https://api.rekserver.dpdns.org');
+const LOCAL = 'https://api.rekserver.dpdns.org';
+const RENDER = 'https://rekserver.onrender.com';
 
+async function serverUrl() {
+    try {
+        const response = await fetch(`${RENDER}/health`, {
+            signal: AbortSignal.timeout(3000),
+        });
+
+        if (!response.ok) throw new Error('Health check failed');
+
+        return RENDER;
+    }
+    catch (err) {
+        console.warn('Render unreachable. Falling back to local server:', err);
+        return LOCAL;
+    }
+}
+
+const socket = io(await serverUrl());
 const statusBadge = document.getElementById('status');
 const complaintList = document.getElementById('complaintList');
 const lookupView = document.getElementById('lookupView');

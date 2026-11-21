@@ -23,7 +23,17 @@ async function serverUrl() {
     }
 }
 
-const socket = io(await serverUrl());
+async function getSocket() {
+    return io(await serverUrl());
+}
+
+getsocket().then(s => {
+    window.socket = s;
+}).catch(err => {
+    console.error('Failed to connect to server:', err);
+    alert('Failed to connect to the server. Please check your internet connection and try again.');
+});
+
 const statusBadge = document.getElementById('status');
 const complaintList = document.getElementById('complaintList');
 const lookupView = document.getElementById('lookupView');

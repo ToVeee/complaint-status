@@ -1,3 +1,4 @@
+
 function esc(str) {
     return String(str ?? '').replace(/[&<>"']/g, ch => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -16,8 +17,7 @@ async function serverUrl() {
         if (!response.ok) throw new Error('Health check failed');
 
         return RENDER;
-    }
-    catch (err) {
+    } catch (err) {
         console.warn('Render unreachable. Falling back to local server:', err);
         return LOCAL;
     }
@@ -27,12 +27,7 @@ async function getSocket() {
     return io(await serverUrl());
 }
 
-getsocket().then(s => {
-    window.socket = s;
-}).catch(err => {
-    console.error('Failed to connect to server:', err);
-    alert('Failed to connect to the server. Please check your internet connection and try again.');
-});
+// ---------- DOM elements ----------
 
 const statusBadge = document.getElementById('status');
 const complaintList = document.getElementById('complaintList');
@@ -45,11 +40,14 @@ const lookupMessage = document.getElementById('lookupMessage');
 const backBtn = document.getElementById('backBtn');
 
 // ---------- state ----------
-let latestHistory = [];   // cached copy of every complaint, refreshed whenever the server sends it
+
+let socket = null;
+let latestHistory = [];
 let historyLoaded = false;
-let targetId = null;      // the tracking ID we're currently trying to show
+let targetId = null;
 
 // ---------- status presentation ----------
+
 const STATUS_META = {
     Pending: { icon: '🟡', className: 'status-pending' },
     Resolved: { icon: '🟢', className: 'status-resolved' },
@@ -60,18 +58,8 @@ function statusMeta(status) {
     return STATUS_META[status] || STATUS_META.Pending;
 }
 
-// ---------- connection ----------
-socket.on('connect', () => {
-    statusBadge.innerText = "🟢 Connected";
-    statusBadge.className = "status-badge";
-});
-
-socket.on('disconnect', () => {
-    statusBadge.innerText = "🔴 Disconnected";
-    statusBadge.className = "status-badge disconnected";
-});
-
 // ---------- view switching ----------
+
 function showResultView() {
     lookupView.style.display = 'none';
     resultView.style.display = 'block';
@@ -92,6 +80,7 @@ function showRemovedMessage(text) {
 }
 
 // ---------- card rendering ----------
+
 function renderComplaintCard(data) {
     const complaintId = data.trackingid || data.trackingId;
     const status = data.status || 'Pending';
@@ -137,16 +126,19 @@ function renderComplaintCard(data) {
 }
 
 // ---------- lookup flow ----------
+
 function normalizeCode(raw) {
     return raw.trim().toUpperCase();
 }
 
 function requestLookup(rawId) {
     const id = normalizeCode(rawId);
+
     if (!id) {
         setLookupMessage('Please enter a tracking code.', true);
         return;
     }
+
     targetId = id;
     codeInput.value = id;
     history.replaceState(null, '', '#' + id);
@@ -159,13 +151,19 @@ function requestLookup(rawId) {
 }
 
 function resolveLookup() {
-    const match = latestHistory.find(c => (c.trackingid || c.trackingId) === targetId);
+    const match = latestHistory.find(
+        c => (c.trackingid || c.trackingId) === targetId
+    );
+
     if (match) {
         setLookupMessage('', false);
         renderComplaintCard(match);
         showResultView();
     } else {
-        setLookupMessage('No complaint found for that code. Check for typos and try again.', true);
+        setLookupMessage(
+            'No complaint found for that code. Check for typos and try again.',
+            true
+        );
     }
 }
 
@@ -184,28 +182,48 @@ backBtn.addEventListener('click', () => {
 });
 
 // ---------- QR photo upload ----------
+
 function decodeQRFromFile(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
+
         reader.onload = (e) => {
             const img = new Image();
+
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 canvas.width = img.width;
                 canvas.height = img.height;
+
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                const imageData = ctx.getImageData(
+                    0, 0, canvas.width, canvas.height
+                );
+
+                const code = jsQR(
+                    imageData.data,
+                    imageData.width,
+                    imageData.height
+                );
+
                 if (code) {
                     resolve(code.data);
                 } else {
-                    reject(new Error("Couldn't find a QR code in that photo. Try a clearer, well-lit picture."));
+                    reject(new Error(
+                        "Couldn't find a QR code in that photo. Try a clearer, well-lit picture."
+                    ));
                 }
             };
-            img.onerror = () => reject(new Error('That file could not be read as an image.'));
+
+            img.onerror = () => reject(
+                new Error('That file could not be read as an image.')
+            );
+
             img.src = e.target.result;
         };
+
         reader.onerror = () => reject(new Error('That file could not be read.'));
         reader.readAsDataURL(file);
     });
@@ -213,13 +231,18 @@ function decodeQRFromFile(file) {
 
 function extractTrackingId(decodedText) {
     const hashIndex = decodedText.indexOf('#');
-    return hashIndex !== -1 ? decodedText.slice(hashIndex + 1).trim() : decodedText.trim();
+
+    return hashIndex !== -1
+        ? decodedText.slice(hashIndex + 1).trim()
+        : decodedText.trim();
 }
 
 qrFileInput.addEventListener('change', async () => {
     const file = qrFileInput.files[0];
     if (!file) return;
+
     setLookupMessage('Reading QR code…', false);
+
     try {
         const decoded = await decodeQRFromFile(file);
         const id = extractTrackingId(decoded);
@@ -232,44 +255,92 @@ qrFileInput.addEventListener('change', async () => {
 });
 
 // ---------- socket events ----------
-socket.on('complaintHistory', (historyArray) => {
-    latestHistory = historyArray || [];
-    historyLoaded = true;
-    if (targetId) resolveLookup();
-});
 
-socket.on('newComplaint', (data) => {
-    const id = data.trackingid || data.trackingId;
-    latestHistory.push(data);
-    if (targetId && id === targetId) {
-        renderComplaintCard(data);
-        showResultView();
+function registerSocketEvents() {
+
+    socket.on('connect', () => {
+        statusBadge.innerText = '🟢 Connected';
+        statusBadge.className = 'status-badge';
+    });
+
+    socket.on('disconnect', () => {
+        statusBadge.innerText = '🔴 Disconnected';
+        statusBadge.className = 'status-badge disconnected';
+    });
+
+    socket.on('complaintHistory', (historyArray) => {
+        latestHistory = historyArray || [];
+        historyLoaded = true;
+
+        if (targetId) resolveLookup();
+    });
+
+    socket.on('newComplaint', (data) => {
+        const id = data.trackingid || data.trackingId;
+
+        latestHistory.push(data);
+
+        if (targetId && id === targetId) {
+            renderComplaintCard(data);
+            showResultView();
+        }
+    });
+
+    socket.on('statusUpdated', ({ trackingId, status, feedback }) => {
+        if (trackingId !== targetId) return;
+
+        const card = document.getElementById(trackingId);
+        if (!card) return;
+
+        const meta = statusMeta(status);
+        const statusEl = card.querySelector('.ticket-status');
+
+        statusEl.className = `ticket-status ${meta.className}`;
+        statusEl.querySelector('.icon').textContent = meta.icon;
+        statusEl.querySelector('.word').textContent = status;
+
+        if (status === 'Resolved') {
+            const feedbackEl = card.querySelector('.ticket-feedback p');
+            feedbackEl.textContent = feedback
+                ? feedback
+                : 'No feedback provided yet.';
+        }
+    });
+
+    socket.on('cardDeleted', ({ trackingId }) => {
+        if (trackingId !== targetId) return;
+
+        showRemovedMessage('This complaint record has been removed.');
+    });
+}
+
+// ---------- connection initialization ----------
+
+async function initializeSocket() {
+    try {
+        socket = await getSocket();
+        window.socket = socket;
+
+        registerSocketEvents();
+
+        console.log('Socket initialized successfully.');
+
+    } catch (err) {
+        console.error('Failed to connect to server:', err);
+
+        statusBadge.innerText = '🔴 Connection failed';
+        statusBadge.className = 'status-badge disconnected';
+
+        alert(
+            'Failed to connect to the server. Please check your internet connection and try again.'
+        );
     }
-});
-
-socket.on('statusUpdated', ({ trackingId, status, feedback }) => {
-    if (trackingId !== targetId) return;
-    const card = document.getElementById(trackingId);
-    if (!card) return;
-
-    const meta = statusMeta(status);
-    const statusEl = card.querySelector('.ticket-status');
-    statusEl.className = `ticket-status ${meta.className}`;
-    statusEl.querySelector('.icon').textContent = meta.icon;
-    statusEl.querySelector('.word').textContent = status;
-
-    if (status === 'Resolved') {
-        const feedbackEl = card.querySelector('.ticket-feedback p');
-        feedbackEl.textContent = feedback ? feedback : 'No feedback provided yet.';
-    }
-});
-
-socket.on('cardDeleted', ({ trackingId }) => {
-    if (trackingId !== targetId) return;
-    showRemovedMessage('This complaint record has been removed.');
-});
+}
 
 // ---------- entry point ----------
+
 if (window.location.hash) {
     requestLookup(window.location.hash.slice(1));
 }
+
+initializeSocket();
